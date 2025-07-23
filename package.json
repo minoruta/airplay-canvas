@@ -1,0 +1,33 @@
+{
+  "name": "airplay-canvas",
+  "version": "0.0.1",
+  "description": "display metadata onto screen",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "SCREEN_TYPE='picture' ts-node src/index.ts < examples/example.xml",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "clean": "rm -rf dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "nodejs",
+    "typescript",
+    "airplay"
+  ],
+  "author": "KINOSHITA minoru",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@minoruta/parse-shairport": "github:minoruta/parse-shairport",
+    "canvas": "^3.1.2",
+    "rxjs": "^7.8.2"
+  }
+}

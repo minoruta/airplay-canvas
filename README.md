@@ -57,26 +57,14 @@ npm run start < /tmp/shairport-sync-metadata
 npm run dev
 ```
 
-### 本番実行
-
-```bash
-npm run start < /tmp/shairport-sync-metadata
-```
-
 ## 設定オプション
 
 ### 環境変数
 
-- `SCREEN_TYPE`: 出力タイプを指定 (`framebuffer`, `picture`)
+- `FB_DEVICE`: フレームバッファのデバイス名 (デフォルト: '/dev/fb0')
+  - `FB_DEVICE=''` と指定した時は、フレームバッファではなくファイルに出力します。
 - `SCREEN_WIDTH`: スクリーン幅（デフォルト: 320）
 - `SCREEN_HEIGHT`: スクリーン高さ（デフォルト: 240）
-
-### スクリーン設定
-
-プロジェクトは複数の出力方式をサポートしています：
-
-- **フレームバッファー**: 直接フレームバッファーに描画
-- **画像ファイル出力**: PNG形式でファイル保存(試験用)
 
 ## 技術仕様
 
@@ -87,7 +75,7 @@ npm run start < /tmp/shairport-sync-metadata
 3. **フィルタリング**: アーティスト名(`artist`)と楽曲名(`title`)のみを抽出
 4. **待ち合わせ**: 両方の情報が揃うまで最大3秒待機
 5. **描画**: Canvasライブラリで文字を描画
-6. **出力**: 指定されたスクリーンタイプに応じて出力
+6. **出力**: 指定されたフレームバッファに出力
 
 ### 使用ライブラリ
 
@@ -103,15 +91,7 @@ npm run start < /tmp/shairport-sync-metadata
 - `npm run build` - TypeScriptをJavaScriptにコンパイル
 - `npm run start` - コンパイル済みのJavaScriptを実行
 - `npm run dev` - サンプルデータでTypeScript直接実行
-- `npm run watch` - ファイル変更を監視して自動再実行
 - `npm run clean` - distディレクトリを削除
-
-### 開発環境
-
-- TypeScript厳格モードが有効
-- ソースマップ生成でデバッグ対応
-- ESLint/Prettierでコード品質管理
-- `nodemon`でホットリロード対応
 
 ## トラブルシューティング
 
@@ -124,11 +104,12 @@ export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 npm install canvas
 ```
 
-### メタデータが表示されない
+### 古いNodeバージョンへの対応
 
-1. Shairport Syncのメタデータ出力設定を確認
-2. パイプの権限とパスを確認
-3. AirPlay接続とメタデータ送信を確認
+Volumio OS等のNodeバージョンが低い(14)時は、node-canvasのバージョンを落として見てください。
+```sh
+% npm i canvas@2.10.1    
+```
 
 ## 関連プロジェクト
 

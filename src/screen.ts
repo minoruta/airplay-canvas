@@ -1,28 +1,23 @@
 const fs = require('fs');
 import { Canvas } from 'canvas';
 
-export function ScreenFactory(width: number, height: number, path?: string): Screen {
-  const type = process.env.SCREEN_TYPE || 'fbuf'; // Default to 'fbuf' if not set
-  if (type === 'fbuf') {
-    if (!path) {
-      throw new Error('Path is required for framebuffer screen');
-    }
-    return new FbufScreen(width, height, path);
-  } else if (type === 'picture') {
-    return new PictureScreen(width, height);
+/**
+ * Factory function to create a Screen instance based on the type.
+ * @param device - The path to the framebuffer device.
+ * @returns An instance of Screen or its subclass.
+ */
+export function ScreenFactory(device: string): Screen {
+  if (!device || device.trim() === '') {
+    return new PictureScreen();
   } else {
-    throw new Error(`Unknown screen type: ${type}`);
+    return new FbufScreen(device);
   }
 }
 
+/**
+ * Abstract class representing a screen for displaying metadata.
+ */
 export abstract class Screen {
-  protected width: number;
-  protected height: number;
-
-  constructor(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-  }
   open(): void {}
   close(): void {}
   abstract update(canvas: Canvas, artist?: string, title?: string): void;
@@ -31,8 +26,8 @@ export abstract class Screen {
 class FbufScreen extends Screen {
   private fd: number | null = null;
 
-  constructor(width: number, height: number, private path: string) {
-    super(width, height);
+  constructor(private path = '/dev/fb0') {
+    super();
   }
 
   override open(): void {
@@ -59,8 +54,9 @@ class FbufScreen extends Screen {
 
   private convertImage(canvas: Canvas): Buffer {
     const srcBuf = canvas.toBuffer('raw');
-    const dstBuf = Buffer.alloc(this.width * this.height * 4);
-    for (let i = 0; i < this.width * this.height; i++) {
+    const bufLength = srcBuf.length;
+    const dstBuf = Buffer.alloc(bufLength);
+    for (let i = 0; i < (bufLength / 4); i++) {
       const r = srcBuf[i * 4 + 0];
       const g = srcBuf[i * 4 + 1];
       const b = srcBuf[i * 4 + 2];
@@ -76,13 +72,13 @@ class FbufScreen extends Screen {
 
 class PictureScreen extends Screen {
 
-  constructor(width: number, height: number) {
-    super(width, height);
+  constructor() {
+    super();
   }
 
   update(canvas: Canvas, artist?: string, title?: string): void {
     const buffer = canvas.toBuffer('image/png');
-    const filename = `${artist || 'unknown'}-${title || 'unknown'}.png`;
+    const filename = `${artist || 'unknown'}-${title || 'unknown'}`;
     fs.writeFileSync(`${filename}.png`, buffer);
   }
 }

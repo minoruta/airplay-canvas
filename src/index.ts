@@ -6,6 +6,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+const FB_DEVICE = process.env.FB_DEVICE ?? '/dev/fb0'; // Default framebuffer device path
+
 const screen = {
   width: Number.parseInt(process.env.SCREEN_WIDTH ?? '320'),
   height: Number.parseInt(process.env.SCREEN_HEIGHT ?? '240'),
@@ -19,8 +21,10 @@ function checkFont(font1: string, font2: string): string {
   return fs.existsSync(font1) ? font1 : font2;
 }
 
-// Canvas example function
-function createTestCanvas() {
+//
+// Prepare the canvas and context
+//
+function prepareCanvas() {
   console.log('Creating test canvas...');
   
   // Create a canvas
@@ -54,25 +58,27 @@ function createTestCanvas() {
 }
 
 function drawTitle(title: string): void {
+  const cleanTitle = title.replace(/\s*\([^)]*\)\s*$/g, '').trim();
   ctx.fillStyle = 'white';
   ctx.font = 'bold 40px "MyFont"';
   ctx.textAlign = 'center';
-  ctx.fillText(title, screen.width / 2, 40, screen.width);
+  ctx.fillText(cleanTitle, screen.width / 2, 40, screen.width);
 }
 
 function drawArtistName(name: string): void {
+  const cleanName = name.replace(/\s*\([^)]*\)\s*$/g, '').trim();
   ctx.fillStyle = 'white';
   ctx.font = 'bold 70px "MyFont"';
   ctx.textAlign = 'center';
-  ctx.fillText(name, screen.width / 2, 120, screen.width);
+  ctx.fillText(cleanName, screen.width / 2, 120, screen.width);
 }
 
-// Example async function
 async function main(): Promise<void> {
   console.log('Application started...');
   try {
-    createTestCanvas();
-    screenInstance = ScreenFactory(screen.width, screen.height);
+    prepareCanvas();
+    screenInstance = ScreenFactory(FB_DEVICE);
+
     parseMetadata()
       .pipe(
         // artistまたはtitleのメタデータのみをフィルター
@@ -118,5 +124,4 @@ async function main(): Promise<void> {
   }
 }
 
-// Run the main function
 main().catch(console.error);

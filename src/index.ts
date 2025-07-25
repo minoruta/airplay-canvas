@@ -78,6 +78,7 @@ async function main(): Promise<void> {
   try {
     prepareCanvas();
     screenInstance = ScreenFactory(FB_DEVICE);
+    screenInstance.open();
 
     parseMetadata()
       .pipe(

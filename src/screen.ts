@@ -26,8 +26,9 @@ export abstract class Screen {
 class FbufScreen extends Screen {
   private fd: number | null = null;
 
-  constructor(private path = '/dev/fb0') {
+  constructor(private path: string) {
     super();
+    console.log(`Using framebuffer device: ${path}`);
   }
 
   override open(): void {

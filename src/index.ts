@@ -24,6 +24,10 @@ function emitPair(artist: string | undefined, title: string | undefined) {
   // ペア出力後はクリア
   currentArtist = undefined;
   currentTitle = undefined;
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = undefined;
+  }
 }
 
 // タイムアウト処理

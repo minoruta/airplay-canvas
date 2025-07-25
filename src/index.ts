@@ -1,6 +1,6 @@
 import { createCanvas, Canvas, CanvasRenderingContext2D, registerFont } from 'canvas';
 import { parseMetadata } from '@minoruta/parse-shairport';
-import { filter, scan, distinctUntilChanged } from 'rxjs/operators';
+import { filter } from 'rxjs/operators';
 import { ScreenFactory, Screen } from './screen';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,8 +17,48 @@ let canvas: Canvas;
 let ctx: CanvasRenderingContext2D;
 let screenInstance: Screen;
 
+// ペア待ち合わせ用の状態管理
+let currentArtist: string | undefined = undefined;
+let currentTitle: string | undefined = undefined;
+let timeoutHandle: NodeJS.Timeout | undefined = undefined;
+
 function checkFont(font1: string, font2: string): string {
   return fs.existsSync(font1) ? font1 : font2;
+}
+
+// ペアが揃った、またはタイムアウトした時に呼び出される関数
+function emitPair(artist: string | undefined, title: string | undefined) {
+  console.log('Received metadata:', artist, title);
+  
+  // Draw background
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, screen.width, screen.height);
+  
+  if (artist) {
+    drawArtistName(artist);
+  }
+  if (title) {
+    drawTitle(title);
+  }
+  
+  screenInstance.update(canvas, artist, title);
+  
+  // ペア出力後はクリア
+  currentArtist = undefined;
+  currentTitle = undefined;
+}
+
+// タイムアウト処理
+function scheduleTimeout() {
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+  }
+  
+  timeoutHandle = setTimeout(() => {
+    if (currentArtist || currentTitle) {
+      emitPair(currentArtist, currentTitle);
+    }
+  }, 3000);
 }
 
 //
@@ -83,42 +123,28 @@ async function main(): Promise<void> {
     parseMetadata()
       .pipe(
         // artistまたはtitleのメタデータのみをフィルター
-        filter(metadata => metadata.type === 'artist' || metadata.type === 'title'),
-        // メタデータを蓄積して両方が揃うまで待つ
-        scan((acc: {artist?: string, title?: string, lastUpdate: number}, current) => {
-          const now = Date.now();
-          if (current.type === 'artist') {
-            return { ...acc, artist: current.payload, lastUpdate: now };
-          } else if (current.type === 'title') {
-            return { ...acc, title: current.payload, lastUpdate: now };
-          }
-          return acc;
-        }, { lastUpdate: Date.now() }),
-        // 両方が揃った時、または3秒経過した時に通す
-        filter(acc => {
-          const hasBoth = !!(acc.artist && acc.title);
-          const timeoutExceeded = Date.now() - acc.lastUpdate > 3000;
-          const hasSomeData = !!(acc.artist || acc.title);
-          
-          return hasBoth || (timeoutExceeded && hasSomeData);
-        }),
-        // 同じ内容の場合は重複を避ける
-        distinctUntilChanged((prev, curr) => 
-          prev.artist === curr.artist && prev.title === curr.title
-        )
+        filter(metadata => metadata.type === 'artist' || metadata.type === 'title')
       )
       .subscribe(metadata => {
-        // Draw background
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, screen.width, screen.height);
-        if (metadata.artist) {
-          drawArtistName(metadata.artist);
+        if (metadata.type === 'artist') {
+          currentArtist = metadata.payload;
+          
+          // アーティストが来た場合、タイトルが既にあるかチェック
+          if (currentTitle) {
+            emitPair(currentArtist, currentTitle);
+          } else {
+            scheduleTimeout();
+          }
+        } else if (metadata.type === 'title') {
+          currentTitle = metadata.payload;
+          
+          // タイトルが来た場合、アーティストが既にあるかチェック
+          if (currentArtist) {
+            emitPair(currentArtist, currentTitle);
+          } else {
+            scheduleTimeout();
+          }
         }
-        if (metadata.title) {
-          drawTitle(metadata.title);
-        }
-        
-        screenInstance.update(canvas, metadata.artist, metadata.title);
       });
   } catch (error) {
     console.error('Canvas test failed:', error);

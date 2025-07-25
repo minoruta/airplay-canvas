@@ -2,7 +2,7 @@ import { parseMetadata } from '@minoruta/parse-shairport';
 import { filter } from 'rxjs/operators';
 import { ScreenFactory, Screen } from './screen';
 
-const FB_DEVICE = process.env.FB_DEVICE ?? '/dev/fb0'; // Default framebuffer device path
+const FB_DEVICE = process.env.FB_DEVICE ?? '/dev/fb1'; // Default framebuffer device path
 
 let screenInstance: Screen;
 

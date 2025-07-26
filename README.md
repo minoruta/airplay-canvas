@@ -49,6 +49,13 @@ npm install
 ```bash
 # Shairport Syncからのメタデータをパイプで渡す
 npm run start < /tmp/shairport-sync-metadata
+```
+
+### cron設定例
+
+```crontab
+@reboot sleep 10 && cd /home/player/airplay-canvas && /home/player/.nvm/versions/node/v22.17.1/bin/node dist/index.js < /tmp/shairport-sync-metadata >> /home/player/airplay-canvas.log 2>&1
+```
 
 ### 開発モード
 

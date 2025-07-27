@@ -1,6 +1,6 @@
 import { parseMetadata } from '@minoruta/parse-shairport';
-import { filter } from 'rxjs/operators';
-import { ScreenFactory, Screen } from './screen';
+import { ScreenFactory } from './screen-factory';
+import { Screen } from './screen';
 
 const FB_DEVICE = process.env.FB_DEVICE ?? '/dev/fb1'; // Default framebuffer device path
 
@@ -44,6 +44,17 @@ function scheduleTimeout() {
   }, 3000);
 }
 
+function clearState() {
+  currentArtist = undefined;
+  currentTitle = undefined;
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = undefined;
+  }
+  if (screenInstance) {
+    screenInstance.cleanup();
+  }
+}
 
 async function main(): Promise<void> {
   console.log('Application started...');
@@ -53,38 +64,52 @@ async function main(): Promise<void> {
     console.log('Screen initialized successfully');
 
     parseMetadata()
-      .pipe(
-        // artistまたはtitleのメタデータのみをフィルター
-        filter(metadata => metadata.type === 'artist' || metadata.type === 'title')
-      )
       .subscribe({
         next: (metadata) => {
-          // 型安全性のチェック
-          if (typeof metadata.payload !== 'string') {
-            console.warn('Invalid metadata payload type:', typeof metadata.payload);
-            return;
-          }
-
-          if (metadata.type === 'artist') {
-            currentArtist = metadata.payload;
-            console.log('Received artist:', metadata.payload);
-            
-            // アーティストが来た場合、タイトルが既にあるかチェック
-            if (currentTitle) {
-              emitPair(currentArtist, currentTitle);
-            } else {
-              scheduleTimeout();
+          switch (metadata.type) {
+            case 'artist': {
+              if (typeof metadata.payload !== 'string') {
+                console.warn('Invalid metadata payload type:', typeof metadata.payload);
+                return;
+              }
+              currentArtist = metadata.payload;
+              console.log('Received artist:', metadata.payload);
+              // アーティストが来た場合、タイトルが既にあるかチェック
+              if (currentTitle) {
+                emitPair(currentArtist, currentTitle);
+              } else {
+                scheduleTimeout();
+              }
+              break;
             }
-          } else if (metadata.type === 'title') {
-            currentTitle = metadata.payload;
-            console.log('Received title:', metadata.payload);
-            
-            // タイトルが来た場合、アーティストが既にあるかチェック
-            if (currentArtist) {
-              emitPair(currentArtist, currentTitle);
-            } else {
-              scheduleTimeout();
+            case 'title': {
+              if (typeof metadata.payload !== 'string') {
+                console.warn('Invalid metadata payload type:', typeof metadata.payload);
+                return;
+              }
+              currentTitle = metadata.payload;
+              console.log('Received title:', metadata.payload);
+              // タイトルが来た場合、アーティストが既にあるかチェック
+              if (currentArtist) {
+                emitPair(currentArtist, currentTitle);
+              } else {
+                scheduleTimeout();
+              }
+              break;
             }
+            case 'session-begin': {
+              console.log('Session begin detected, resetting state');
+              clearState();
+              break;
+            }
+            case 'session-end': {
+              console.log('Session end detected, cleaning up');
+              clearState();
+              break;
+            }
+            default:
+              console.warn('Unknown metadata type:', metadata.type);
+              break;
           }
         },
         error: (error) => {
@@ -104,9 +129,7 @@ async function main(): Promise<void> {
 // プロセス終了時のクリーンアップ
 process.on('SIGINT', () => {
   console.log('Received SIGINT, cleaning up...');
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle);
-  }
+  clearState();
   if (screenInstance) {
     screenInstance.close();
   }
@@ -115,9 +138,7 @@ process.on('SIGINT', () => {
 
 process.on('SIGTERM', () => {
   console.log('Received SIGTERM, cleaning up...');
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle);
-  }
+  clearState();
   if (screenInstance) {
     screenInstance.close();
   }

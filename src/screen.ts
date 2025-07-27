@@ -2,8 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { createCanvas, Canvas, CanvasRenderingContext2D, registerFont } from 'canvas';
-import { FbufScreen } from './fbuf-screen';
-import { PictureScreen } from './picture-screen';
 
 const SCREEN_DIMENSIONS = {
   width: Number.parseInt(process.env.SCREEN_WIDTH ?? '320'),
@@ -15,27 +13,14 @@ function checkFont(font1: string, font2: string): string {
 }
 
 /**
- * Factory function to create a Screen instance based on the type.
- * @param device - The path to the framebuffer device.
- * @returns An instance of Screen or its subclass.
- */
-export function ScreenFactory(device: string): Screen {
-  if (!device || device.trim() === '') {
-    return new PictureScreen();
-  } else {
-    return new FbufScreen(device);
-  }
-}
-
-/**
  * Abstract class representing a screen for displaying metadata.
  * This class provides methods for drawing text and managing the canvas.
  */
 export abstract class Screen {
   protected canvas: Canvas;
   protected ctx: CanvasRenderingContext2D;
-  protected previousArtist?: string;
-  protected previousTitle?: string;
+  protected previousArtist: string | undefined;
+  protected previousTitle: string | undefined;
 
   constructor() {
     this.canvas = createCanvas(SCREEN_DIMENSIONS.width, SCREEN_DIMENSIONS.height);
@@ -79,6 +64,16 @@ export abstract class Screen {
    * @param title - The title of the song.
    */
   abstract update(artist?: string, title?: string): void;
+
+  /**
+   * Cleans the screen by resetting the previous artist and title.
+   * This method also clears the canvas.
+   */
+  cleanup() {
+    this.previousArtist = undefined;
+    this.previousTitle = undefined;
+    this.clearCanvas();
+  }
 
   protected hasContentChanged(artist?: string, title?: string): boolean {
     return !(artist === this.previousArtist && title === this.previousTitle);

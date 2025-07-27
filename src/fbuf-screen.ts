@@ -39,6 +39,14 @@ export class FbufScreen extends Screen {
     fs.writeSync(this.fd, buf, 0, buf.length, 0);
   }
 
+  override cleanup(): void {
+    super.cleanup();
+    if (this.fd !== null) {
+      const buf = this.convertImage();
+      fs.writeSync(this.fd, buf, 0, buf.length, 0);
+    }
+  }
+
   private convertImage(): Buffer {
     const srcBuf = this.canvas.toBuffer('raw');
     const bufLength = srcBuf.length;
